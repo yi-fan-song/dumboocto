@@ -17,35 +17,24 @@ You should have received a copy of the GNU General Public License
 along with mini-octo-giggle. If not, see <https://www.gnu.org/licenses/>.
 */
 
-package repository
+package errorhandling
 
 import (
-	"database/sql"
-	"fmt"
-	"net/url"
-
-	// mssql driver
-	_ "github.com/denisenkom/go-mssqldb"
+	"log"
+	"mini-octo-giggle/logging"
 )
 
-// GetSQLDb tries connects to mssql db.
-// Panics with sql.Open() errors if it fails.
-func GetSQLDb(username, password, hostname string, port int) *sql.DB {
-	query := url.Values{}
-	query.Add("Authentication API", "AuthenticationAPI")
-
-	u := url.URL{
-		Scheme:   "sqlserver",
-		User:     url.UserPassword(username, password),
-		Host:     fmt.Sprintf("%s:%d", hostname, port),
-		RawQuery: query.Encode(),
+// Check compares error with the expected and handles the error with the errHandler if it doesn't match
+func Check(err, expected error, errHandler func(error)) {
+	if err != expected {
+		errHandler(err)
 	}
+}
 
-	db, err := sql.Open("sqlserver", u.String())
-
-	if err == nil {
-		return db
-	}
-
-	panic(err)
+// CheckFatal compares error with the expected and logs fatal if it doesn't match
+func CheckFatal(err, expected error) {
+	Check(err, expected, func(err error) {
+		logging.LogFatal(err)
+		log.Fatal(err)
+	})
 }

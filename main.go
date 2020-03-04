@@ -21,7 +21,8 @@ package main
 
 import (
 	"fmt"
-	repository "mini-octo-giggle/sql-repository"
+	"html/template"
+	"mini-octo-giggle/errorhandling"
 	"net/http"
 	"os"
 	"strconv"
@@ -55,17 +56,72 @@ func loadDbEnv() (username, password, hostname string, port int) {
 }
 
 func main() {
-
 	if err := godotenv.Load(); err != nil {
 		panic(err)
 	}
 
-	username, password, hostname, dbPort := loadDbEnv()
+	const tpl = `
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>{{.Title}}</title>
+	</head>
+	<body>
+		{{range .Items}}<div>{{ . }}</div>{{else}}<div><strong>no rows</strong></div>{{end}}
+	</body>
+</html>`
 
-	repository.GetSQLDb(username, password, hostname, dbPort)
+	// t, err := template.New("webpage").Parse(tpl)
+	// check(err)
+
+	tmpl, err := template.ParseFiles(
+		"./templates/home.html",
+		"./templates/components/header.html",
+		"./templates/components/footer.html",
+	)
+	errorhandling.CheckFatal(err, nil)
+
+	data := struct {
+		Title string
+		Items []string
+	}{
+		Title: "My page",
+		Items: []string{
+			"My photos",
+			"My blog",
+		},
+	}
+
+	// err = tmpl.Execute(os.Stdout, data)
+
+	// err = t.Execute(os.Stdout, data)
+	// check(err)
+
+	// noItems := struct {
+	// 	Title string
+	// 	Items []string
+	// }{
+	// 	Title: "My another page",
+	// 	Items: []string{},
+	// }
+
+	// err = t.Execute(os.Stdout, noItems)
+	// check(err)
+
+	// username, password, hostname, dbPort := loadDbEnv()
+
+	// repository.GetSQLDb(username, password, hostname, dbPort)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintf(w, "Hello World")
+	})
+
+	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		// _, _ = fmt.Fprintf(w, "what")
+
+		err = tmpl.Execute(w, data)
+		errorhandling.CheckFatal(err, nil)
 	})
 
 	if port := os.Getenv("port"); port != "" {
